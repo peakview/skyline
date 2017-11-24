@@ -1,0 +1,18 @@
+Artificial intelligence is ultimate of aggregegation of human knowledge and skills.
+
+Machine and tool can be used as a function. People only need to know the input and expected output. A small group of persons can build up a machine. Then, people can use lots of building blocks to build something big.
+
+Machine is built based on knowledge. Internet enables people to share their knowledge, to collect enormous mount of data, to see the pattern from much larger scale. People can make connections more easily and efficiently.
+
+Knowledge comes from cognition. We practice, trial and verify. Computer enables us to calculate and adjust model.
+
+Cognition is unique. Now, people understand how to learn. How to enable a machine to learn. How to learn in very large scale. How to learn fast. There will be an knowledge explosionm, beyond the level any human could ever reach. 
+
+An interesting thing is how could machine evolve from a low level goal to high level goal.
+How could a AI which is capable of tx/rx small mount of data to evolve to transmit large data.
+
+How could multiple CNNs work together.
+
+Or on the other hand, how could a CNN which is capable of multi facets to isolate these facets into several small building block.
+
+Scaling/cooperation/Hierachical.
