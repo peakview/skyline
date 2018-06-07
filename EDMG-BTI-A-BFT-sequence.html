@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>11ay Initial Access: BTI + A-BFT</h2>
+
+<p> EDMG AP or PCP transmits a sequence of DMG Beacon, then EDMG non-AP STAs will access in A-BFT.</p>
+
+<svg width="800" height="380" id="demo2">
+  
+  Sorry, your browser does not support inline SVG.  
+</svg>
+
+<p> Frame sequence = </p>
+<p id="demo"></p>
+
+<script>
+function Frame(fName, fWidth) {
+    this.name = fName;
+    this.width = fWidth;
+    this.height = 0;
+}
+Frame.prototype.plot = function(svgID,x,y) {
+    var rectElement = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rectElement.setAttribute("fill", "#86aeef");
+    rectElement.setAttribute("x", x);
+    rectElement.setAttribute("y", y);
+    rectElement.setAttribute('stroke','#000');
+    rectElement.setAttribute('stroke-width','1');
+    rectElement.setAttribute("width", this.width);
+    rectElement.setAttribute("height", this.height);
+    var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    textElement.setAttribute("x", x + this.width/2-30);
+    textElement.setAttribute("y", y + this.height/2+5);
+    //textElement.setAttribute("x", "50%");
+    //textElement.setAttribute("y", "50%");
+    //textElement.setAttribute("alignment-baseline","middle");
+    textElement.textContent = this.name;
+
+    document.getElementById(svgID).appendChild(rectElement);
+    document.getElementById(svgID).appendChild(textElement);
+    
+    return x + this.width;
+};
+
+function DMGFrame(fName, fWidth, tailName, nRepeat) {
+    Frame.call(this, fName, fWidth);
+    
+    this.tailName = tailName;
+    this.nRepeat = nRepeat;
+}
+DMGFrame.prototype.plotTail = function(svgID, x, y) {
+    var rectElement = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rectElement.setAttribute("fill", "#86aeef");
+    rectElement.setAttribute("x", x);
+    rectElement.setAttribute("y", y);
+    rectElement.setAttribute('stroke','#000');
+    rectElement.setAttribute('stroke-width','1');
+    rectElement.setAttribute("width", 20);
+    rectElement.setAttribute("height", this.height);
+    var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    x_tmp=x + 16;
+    y_tmp = y + this.height/2+25;
+    textElement.setAttribute("x", x_tmp);
+    textElement.setAttribute("y", y_tmp);
+    textElement.setAttribute("transform", "rotate(-90,"+(x_tmp)+"," + (y_tmp)+")");
+    //textElement.setAttribute("x", "50%");
+    //textElement.setAttribute("y", "50%");
+    //textElement.setAttribute("alignment-baseline","middle");
+    textElement.textContent = this.tailName;
+
+    document.getElementById(svgID).appendChild(rectElement);
+    document.getElementById(svgID).appendChild(textElement);
+    
+    return x + 20;
+}
+DMGFrame.prototype.plot = function(svgID, x, y) {
+    i_x=Frame.prototype.plot.call(this, svgID, x, y);
+    var iiTail=0;
+    for (iiTail = 0; iiTail < this.nRepeat; iiTail++) {
+        i_x=this.plotTail(svgID, i_x, y);
+    }
+    //i_x=x + this.width;
+    return i_x;
+};
+
+var bcnFrame = new Frame("Beacon", 100);
+var dmgbcnFrame = new DMGFrame("Beacon", 100, "TRN-R", 3);
+
+function IFS(ifsName,fWidth) {
+    this.name = ifsName;
+    this.width = fWidth;
+    this.height = 0;
+}
+IFS.prototype.plot = function(svgID,x,y) {
+    var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    textElement.setAttribute("x", x + this.width/4-20);
+    textElement.setAttribute("y", y - 10);
+    //textElement.setAttribute("x", "50%");
+    //textElement.setAttribute("y", "50%");
+    //textElement.setAttribute("alignment-baseline","middle");
+    textElement.textContent = this.name;
+
+    document.getElementById(svgID).appendChild(textElement);
+    return x + this.width;
+}
+var sbIFS = new IFS("SBIFS", 10);
+function Sequence(seq,fHeight) {
+    this.seq = seq;
+    this.height = fHeight;
+}
+Sequence.prototype.plot = function(svgID,x,y) {
+	var i_x=x;
+    for (i = 0; i < this.seq.length; i++) { 
+        this.seq[i].height = this.height;
+        i_x = this.seq[i].plot(svgID,i_x,y);
+    }
+}
+Sequence.prototype.printName = function() {
+    var i;
+    text="";
+    for (i = 0; i < this.seq.length; i++) { 
+        text += this.seq[i].name;
+        if (i < this.seq.length - 1) { 
+            text += "+";
+        }
+    }
+    return text;
+};
+var btiSeq = new Sequence([dmgbcnFrame,sbIFS,bcnFrame,sbIFS,dmgbcnFrame], 60);
+document.getElementById("demo").innerHTML = btiSeq.printName();
+svgID="demo2";
+btiSeq.plot(svgID,20,30);
+
+</script>
+
+</body>
+</html>
