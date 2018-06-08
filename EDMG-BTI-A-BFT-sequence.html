@@ -6,21 +6,41 @@
 
 <p> EDMG AP or PCP transmits a sequence of DMG Beacon, then EDMG non-AP STAs will access in A-BFT.</p>
 
-<svg width="800" height="380" id="demo2">
-  
+<p>Features: 1, short SSW; 2, EDMG dedicated SSW slot; 3, Beacon+TRN-R</p>
+<svg width="1200" height="480" id="demo2">
+  <defs>
+    <!-- arrowhead marker definition -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5"
+        markerWidth="6" markerHeight="6"
+        orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+
+    <!-- simple dot marker definition -->
+    <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5"
+        markerWidth="5" markerHeight="5">
+      <circle cx="5" cy="5" r="5" fill="red" />
+    </marker>
+  </defs>
   Sorry, your browser does not support inline SVG.  
 </svg>
 
 <p> Frame sequence = </p>
-<p id="demo"></p>
+<p id="demo">a</p>
+
+<p id="dbg">b</p>
 
 <script>
+function SeqInfo(x_end, layerID) {
+    this.x_end = x_end;
+    this.layerID = layerID;
+}
 function Frame(fName, fWidth) {
     this.name = fName;
     this.width = fWidth;
     this.height = 0;
 }
-Frame.prototype.plot = function(svgID,x,y) {
+Frame.prototype.plot = function(svgID,x,y,dashed=0) {
     var rectElement = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rectElement.setAttribute("fill", "#86aeef");
     rectElement.setAttribute("x", x);
@@ -29,6 +49,9 @@ Frame.prototype.plot = function(svgID,x,y) {
     rectElement.setAttribute('stroke-width','1');
     rectElement.setAttribute("width", this.width);
     rectElement.setAttribute("height", this.height);
+    if (dashed>0) {
+        rectElement.setAttribute("stroke-dasharray","5,10");
+    }
     var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
     textElement.setAttribute("x", x + this.width/2-30);
     textElement.setAttribute("y", y + this.height/2+5);
@@ -40,7 +63,7 @@ Frame.prototype.plot = function(svgID,x,y) {
     document.getElementById(svgID).appendChild(rectElement);
     document.getElementById(svgID).appendChild(textElement);
     
-    return x + this.width;
+    return new SeqInfo(x + this.width, 0);
 };
 
 function DMGFrame(fName, fWidth, tailName, nRepeat) {
@@ -50,16 +73,17 @@ function DMGFrame(fName, fWidth, tailName, nRepeat) {
     this.nRepeat = nRepeat;
 }
 DMGFrame.prototype.plotTail = function(svgID, x, y) {
+    var TRNwidth = 16;
     var rectElement = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rectElement.setAttribute("fill", "#86aeef");
     rectElement.setAttribute("x", x);
     rectElement.setAttribute("y", y);
     rectElement.setAttribute('stroke','#000');
     rectElement.setAttribute('stroke-width','1');
-    rectElement.setAttribute("width", 20);
+    rectElement.setAttribute("width", TRNwidth);
     rectElement.setAttribute("height", this.height);
     var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    x_tmp=x + 16;
+    x_tmp=x + 14;
     y_tmp = y + this.height/2+25;
     textElement.setAttribute("x", x_tmp);
     textElement.setAttribute("y", y_tmp);
@@ -72,20 +96,34 @@ DMGFrame.prototype.plotTail = function(svgID, x, y) {
     document.getElementById(svgID).appendChild(rectElement);
     document.getElementById(svgID).appendChild(textElement);
     
-    return x + 20;
+    return new SeqInfo(x + TRNwidth, 0);
 }
 DMGFrame.prototype.plot = function(svgID, x, y) {
-    i_x=Frame.prototype.plot.call(this, svgID, x, y);
+    seqInfo=Frame.prototype.plot.call(this, svgID, x, y);
+    var i_x=seqInfo.x_end;
     var iiTail=0;
     for (iiTail = 0; iiTail < this.nRepeat; iiTail++) {
-        i_x=this.plotTail(svgID, i_x, y);
+        seqInfo=this.plotTail(svgID, i_x, y);
+        i_x=seqInfo.x_end;
     }
     //i_x=x + this.width;
-    return i_x;
+    return new SeqInfo(i_x, 0);
 };
 
 var bcnFrame = new Frame("Beacon", 100);
-var dmgbcnFrame = new DMGFrame("Beacon", 100, "TRN-R", 3);
+var sswfbFrame = new Frame("SSW FB", 60);
+var dmgbcnFrame = new DMGFrame("Beacon", 100, "TRN-R", 2);
+
+
+function Slot(fName, fWidth) {
+    Frame.call(this, fName, fWidth);   
+}
+Slot.prototype.plot = function(svgID, x, y) {
+    seqInfo=Frame.prototype.plot.call(this, svgID, x, y, 1);
+    return seqInfo;
+};
+var sswSlot = new Slot("SSW", 66);
+var s_sswSlot = new Slot("sSSW", 39);
 
 function IFS(ifsName,fWidth) {
     this.name = ifsName;
@@ -96,29 +134,57 @@ IFS.prototype.plot = function(svgID,x,y) {
     var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
     textElement.setAttribute("x", x + this.width/4-20);
     textElement.setAttribute("y", y - 10);
-    //textElement.setAttribute("x", "50%");
-    //textElement.setAttribute("y", "50%");
-    //textElement.setAttribute("alignment-baseline","middle");
     textElement.textContent = this.name;
 
     document.getElementById(svgID).appendChild(textElement);
-    return x + this.width;
+    return new SeqInfo(x + this.width, 0);
 }
 var sbIFS = new IFS("SBIFS", 10);
-function Sequence(seq,fHeight) {
+var mbIFS = new IFS("MBIFS", 20);
+
+function Sequence(seq,fHeight,seqName="") {
     this.seq = seq;
     this.height = fHeight;
+    this.name = seqName;
 }
 Sequence.prototype.plot = function(svgID,x,y) {
+    var seqInfo;
 	var i_x=x;
-    for (i = 0; i < this.seq.length; i++) { 
+    var layerID=0;
+    var y_space_layer=30;
+    for (var i = 0; i < this.seq.length; i++) { 
         this.seq[i].height = this.height;
-        i_x = this.seq[i].plot(svgID,i_x,y);
+        seqInfo = this.seq[i].plot(svgID,i_x,y);
+        i_x = seqInfo.x_end;
+        if (layerID < seqInfo.layerID) {
+            layerID = seqInfo.layerID;
+        }
+        document.getElementById("dbg").innerHTML = document.getElementById("dbg").innerHTML + "/n"+ this.seq[i].name + "-"+i_x;
     }
+    if (this.name.length >0) {
+    var lineElement = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    lineElement.setAttribute("x1", x);
+    lineElement.setAttribute("y1", y - y_space_layer*(layerID+1));
+    lineElement.setAttribute("x2", i_x);
+    lineElement.setAttribute("y2", y - y_space_layer*(layerID+1));
+    lineElement.setAttribute("style", "stroke:rgb(0,0,0);stroke-width:2");
+    lineElement.setAttribute("marker-start","url(#arrow)");
+    lineElement.setAttribute("marker-end","url(#arrow)");
+
+
+    var textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    textElement.setAttribute("x", (x + i_x)/2);
+    textElement.setAttribute("y", y - y_space_layer*(layerID+1) - 5);
+    textElement.textContent = this.name;//+"("+this.seq.length;
+
+    document.getElementById(svgID).appendChild(lineElement);
+    document.getElementById(svgID).appendChild(textElement);
+    }
+    return new SeqInfo(i_x, layerID+1);
 }
 Sequence.prototype.printName = function() {
     var i;
-    text="";
+    text=this.name + " sequence = ";
     for (i = 0; i < this.seq.length; i++) { 
         text += this.seq[i].name;
         if (i < this.seq.length - 1) { 
@@ -127,12 +193,31 @@ Sequence.prototype.printName = function() {
     }
     return text;
 };
-var btiSeq = new Sequence([dmgbcnFrame,sbIFS,bcnFrame,sbIFS,dmgbcnFrame], 60);
-document.getElementById("demo").innerHTML = btiSeq.printName();
+
+
+
+var dmgbtiSeq = new Sequence([bcnFrame,sbIFS,bcnFrame,sbIFS,bcnFrame,sbIFS,bcnFrame,sbIFS,bcnFrame,sbIFS,bcnFrame,mbIFS], 60, "BTI");
+var edmgbtiSeq = new Sequence([dmgbcnFrame,sbIFS,dmgbcnFrame,sbIFS,dmgbcnFrame,mbIFS], 60, "BTI");
+
+var dmgsswslotSeq = new Sequence([sswSlot,sbIFS,sswSlot,mbIFS,sswfbFrame,mbIFS], 60, "SSW slot");
+var edmgsswslotSeq = new Sequence([s_sswSlot,sbIFS,s_sswSlot,sbIFS,s_sswSlot,mbIFS,sswfbFrame,mbIFS], 60, "SSW slot");
+
+var dmgabftSeq = new Sequence([dmgsswslotSeq,dmgsswslotSeq], 60, "A-BFT");
+var edmgabftSeq = new Sequence([edmgsswslotSeq,edmgsswslotSeq,edmgsswslotSeq], 60, "A-BFT");
+document.getElementById("demo").innerHTML = dmgbtiSeq.printName();
 svgID="demo2";
-btiSeq.plot(svgID,20,30);
+
+seqInfo = dmgbtiSeq.plot(svgID,20,90);
+dmgabftSeq.plot(svgID,seqInfo.x_end,90);
+//var dmgSeq=new Sequence([dmgbtiSeq,dmgabftSeq], 60, "Initial Access");
+//dmgSeq.plot(svgID,20,120)
+
+seqInfo = edmgbtiSeq.plot(svgID,20,290);
+edmgabftSeq.plot(svgID,seqInfo.x_end,290);
 
 </script>
 
 </body>
 </html>
+
+
